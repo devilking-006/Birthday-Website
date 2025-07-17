@@ -234,10 +234,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "AI Message Generation API"
-    - "File Upload API"
-    - "Birthday Wish CRUD APIs"
-    - "Database Models"
+    - "Landing Page with Interactive No Button"
+    - "Create Wish Form"
+    - "Birthday Wish Display"
+    - "API Integration Service"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
