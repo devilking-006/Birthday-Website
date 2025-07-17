@@ -7,8 +7,9 @@ import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
-import { mockRelationships, mockColorSchemes, generateMockMessage } from '../mock';
+import { mockRelationships, mockColorSchemes } from '../mock';
 import { useToast } from '../hooks/use-toast';
+import { api } from '../services/api';
 
 const CreateWish = () => {
   const navigate = useNavigate();
@@ -23,7 +24,10 @@ const CreateWish = () => {
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const colorScheme = formData.relationship ? mockColorSchemes[formData.relationship] : mockColorSchemes.friend;
 
@@ -34,7 +38,7 @@ const CreateWish = () => {
     }));
   };
 
-  const handleFileUpload = (files) => {
+  const handleFileUpload = async (files) => {
     const validFiles = Array.from(files).filter(file => {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
@@ -70,24 +74,36 @@ const CreateWish = () => {
       return;
     }
 
-    // Convert files to base64 for preview (mock implementation)
-    validFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newPhoto = {
-          id: Date.now() + Math.random(),
-          url: e.target.result,
-          type: file.type.startsWith('image/') ? 'image' : 'video',
-          name: file.name
-        };
-        
-        setFormData(prev => ({
-          ...prev,
-          photos: [...prev.photos, newPhoto]
-        }));
-      };
-      reader.readAsDataURL(file);
-    });
+    if (validFiles.length === 0) return;
+
+    setIsUploading(true);
+    
+    try {
+      const response = await api.uploadFiles(validFiles);
+      const uploadedMedia = response.data.files;
+      
+      setFormData(prev => ({
+        ...prev,
+        photos: [...prev.photos, ...uploadedMedia]
+      }));
+      
+      setUploadedFiles(prev => [...prev, ...validFiles]);
+      
+      toast({
+        title: "Files uploaded!",
+        description: `Successfully uploaded ${uploadedMedia.length} file(s)`,
+      });
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: error.response?.data?.detail || "Failed to upload files",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDrop = (e) => {
@@ -124,20 +140,29 @@ const CreateWish = () => {
 
     setIsGenerating(true);
     
-    // Simulate AI message generation
-    setTimeout(() => {
-      const generatedMessage = generateMockMessage(formData.personName, formData.relationship);
+    try {
+      const response = await api.generateMessage(formData.personName, formData.relationship);
+      
       setFormData(prev => ({
         ...prev,
-        message: generatedMessage
+        message: response.data.message
       }));
-      setIsGenerating(false);
       
       toast({
         title: "Message generated!",
         description: "Your personalized birthday message is ready. Feel free to edit it!",
       });
-    }, 2000);
+      
+    } catch (error) {
+      console.error('Message generation error:', error);
+      toast({
+        title: "Generation failed",
+        description: error.response?.data?.detail || "Failed to generate message",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCustomNoTextChange = (index, value) => {
@@ -149,7 +174,7 @@ const CreateWish = () => {
     }));
   };
 
-  const createWish = () => {
+  const createWish = async () => {
     if (!formData.personName || !formData.relationship || !formData.message) {
       toast({
         title: "Incomplete form",
@@ -159,22 +184,29 @@ const CreateWish = () => {
       return;
     }
 
-    // Simulate creating wish and getting ID
-    const wishId = 'mock-wish-' + Date.now();
+    setIsCreating(true);
     
-    // Store in localStorage for mock implementation
-    localStorage.setItem(`wish-${wishId}`, JSON.stringify({
-      ...formData,
-      wishId,
-      createdAt: new Date().toISOString()
-    }));
+    try {
+      const response = await api.createWish(formData);
+      const createdWish = response.data;
+      
+      toast({
+        title: "Wish created!",
+        description: "Your birthday wish has been created successfully!",
+      });
 
-    toast({
-      title: "Wish created!",
-      description: "Your birthday wish has been created successfully!",
-    });
-
-    navigate(`/preview/${wishId}`);
+      navigate(`/preview/${createdWish.id}`);
+      
+    } catch (error) {
+      console.error('Create wish error:', error);
+      toast({
+        title: "Creation failed",
+        description: error.response?.data?.detail || "Failed to create wish",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -234,7 +266,7 @@ const CreateWish = () => {
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
                   dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                }`}
+                } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -246,11 +278,14 @@ const CreateWish = () => {
                   onChange={(e) => handleFileUpload(e.target.files)}
                   className="hidden"
                   id="fileInput"
+                  disabled={isUploading}
                 />
                 <label htmlFor="fileInput" className="cursor-pointer">
-                  <div className="text-6xl mb-4">📸</div>
+                  <div className="text-6xl mb-4">
+                    {isUploading ? '⏳' : '📸'}
+                  </div>
                   <p className="text-xl text-gray-600 mb-2">
-                    Drop files here or click to upload
+                    {isUploading ? 'Uploading files...' : 'Drop files here or click to upload'}
                   </p>
                   <p className="text-sm text-gray-500">
                     Supports images and videos (max 50MB each)
@@ -265,13 +300,13 @@ const CreateWish = () => {
                     <div key={photo.id} className="relative group">
                       {photo.type === 'image' ? (
                         <img
-                          src={photo.url}
+                          src={`data:image/jpeg;base64,${photo.data}`}
                           alt={photo.name}
                           className="w-full h-32 object-cover rounded-lg shadow-md"
                         />
                       ) : (
                         <video
-                          src={photo.url}
+                          src={`data:video/mp4;base64,${photo.data}`}
                           className="w-full h-32 object-cover rounded-lg shadow-md"
                           controls
                         />
@@ -344,10 +379,18 @@ const CreateWish = () => {
             <div className="text-center">
               <Button
                 onClick={createWish}
+                disabled={isCreating}
                 className="px-12 py-4 text-lg font-semibold hover:scale-105 transition-all duration-300 shadow-lg"
                 style={{ backgroundColor: colorScheme.primary }}
               >
-                🎁 Create Birthday Wish
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  '🎁 Create Birthday Wish'
+                )}
               </Button>
             </div>
           </div>

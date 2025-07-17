@@ -3,28 +3,39 @@ import { useParams } from 'react-router-dom';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { mockColorSchemes, mockBirthdayMessage } from '../mock';
+import { mockColorSchemes } from '../mock';
+import { api } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 const BirthdayWish = () => {
   const { wishId } = useParams();
+  const { toast } = useToast();
+  
   const [wishData, setWishData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   useEffect(() => {
-    // Simulate loading wish data
-    setTimeout(() => {
-      // Try to get from localStorage first (mock implementation)
-      const storedWish = localStorage.getItem(`wish-${wishId}`);
-      if (storedWish) {
-        setWishData(JSON.parse(storedWish));
-      } else {
-        // Fallback to mock data
-        setWishData(mockBirthdayMessage);
+    const fetchWish = async () => {
+      try {
+        const response = await api.getWish(wishId);
+        setWishData(response.data);
+      } catch (error) {
+        console.error('Error fetching wish:', error);
+        toast({
+          title: "Error loading wish",
+          description: "The birthday wish could not be loaded",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }, 1000);
-  }, [wishId]);
+    };
+
+    if (wishId) {
+      fetchWish();
+    }
+  }, [wishId, toast]);
 
   if (isLoading) {
     return (
@@ -96,7 +107,7 @@ const BirthdayWish = () => {
           <div className="text-center mb-8">
             <div className="text-6xl mb-4 animate-bounce">🎉</div>
             <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              Happy Birthday {wishData.personName}!
+              Happy Birthday {wishData.person_name}!
             </h1>
             <Badge 
               className="text-sm px-4 py-2"
@@ -117,13 +128,13 @@ const BirthdayWish = () => {
                 <div className="w-full h-96 rounded-lg overflow-hidden shadow-lg">
                   {wishData.photos[currentPhotoIndex].type === 'image' ? (
                     <img
-                      src={wishData.photos[currentPhotoIndex].url}
+                      src={`data:image/jpeg;base64,${wishData.photos[currentPhotoIndex].data}`}
                       alt={`Memory ${currentPhotoIndex + 1}`}
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <video
-                      src={wishData.photos[currentPhotoIndex].url}
+                      src={`data:video/mp4;base64,${wishData.photos[currentPhotoIndex].data}`}
                       className="w-full h-full object-cover"
                       controls
                       autoPlay
@@ -181,7 +192,7 @@ const BirthdayWish = () => {
           {/* Footer */}
           <div className="text-center">
             <div className="text-sm text-gray-500 mb-4">
-              Created with 💖 on {new Date(wishData.createdAt).toLocaleDateString()}
+              Created with 💖 on {new Date(wishData.created_at).toLocaleDateString()}
             </div>
             
             <div className="flex justify-center space-x-4">

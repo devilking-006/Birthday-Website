@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { mockColorSchemes, mockBirthdayMessage } from '../mock';
+import { mockColorSchemes } from '../mock';
+import { api } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const { wishId } = useParams();
+  const { toast } = useToast();
+  
   const [noButtonPosition, setNoButtonPosition] = useState({ x: 0, y: 0 });
   const [noButtonText, setNoButtonText] = useState('No');
   const [noClickCount, setNoClickCount] = useState(0);
@@ -14,17 +18,32 @@ const LandingPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading wish data
-    setTimeout(() => {
-      setWishData(mockBirthdayMessage);
-      setIsLoading(false);
-    }, 1000);
-  }, [wishId]);
+    const fetchWish = async () => {
+      try {
+        const response = await api.getWish(wishId);
+        setWishData(response.data);
+        setNoButtonText(response.data.custom_no_texts?.[0] || 'No');
+      } catch (error) {
+        console.error('Error fetching wish:', error);
+        toast({
+          title: "Error loading wish",
+          description: "The birthday wish could not be loaded",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (wishId) {
+      fetchWish();
+    }
+  }, [wishId, toast]);
 
   const colorScheme = wishData ? mockColorSchemes[wishData.relationship] : mockColorSchemes.friend;
 
   const handleNoClick = () => {
-    const customTexts = wishData?.customNoTexts || ['No way!', 'Not happening!', 'Try harder!', 'Nope!', 'Maybe not!'];
+    const customTexts = wishData?.custom_no_texts || ['No way!', 'Not happening!', 'Try harder!', 'Nope!', 'Maybe not!'];
     
     // Change button text
     const newText = customTexts[noClickCount % customTexts.length];
@@ -52,6 +71,22 @@ const LandingPage = () => {
     );
   }
 
+  if (!wishData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-500 to-pink-500">
+        <Card className="p-8 text-center">
+          <div className="text-6xl mb-4">😞</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Oops! Wish not found
+          </h2>
+          <p className="text-gray-600">
+            The birthday wish you're looking for doesn't exist or has expired.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen flex items-center justify-center ${colorScheme.gradient} p-4 relative overflow-hidden`}>
       {/* Background decorations */}
@@ -66,7 +101,7 @@ const LandingPage = () => {
         <div className="mb-8">
           <div className="text-6xl mb-4 animate-bounce">🎁</div>
           <h1 className="text-3xl font-bold mb-4 text-gray-800">
-            Hey {wishData?.personName || 'Friend'}!
+            Hey {wishData?.person_name || 'Friend'}!
           </h1>
           <p className="text-xl text-gray-600 mb-8 leading-relaxed">
             I have prepared something very special for your birthday...
