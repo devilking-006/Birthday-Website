@@ -43,7 +43,7 @@ const Home = () => {
           </a>
           
           <a
-            href="/gift/mock-wish-123"
+            href="/gift/87a4a660-4fe8-4ff8-bdcb-cce81311a478"
             className="px-8 py-4 bg-white/20 text-white font-bold text-lg rounded-full shadow-lg hover:bg-white/30 transform hover:scale-105 transition-all duration-300 backdrop-blur-sm"
           >
             🎁 View Demo Wish
