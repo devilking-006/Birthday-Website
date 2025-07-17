@@ -2,10 +2,10 @@ import { useEffect } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import axios from "axios";
-import { Toaster } from "./components/ui/toaster";
-import LandingPage from "./components/LandingPage";
-import CreateWish from "./components/CreateWish";
-import BirthdayWish from "./components/BirthdayWish";
+import { Toaster } from "./frontend/src/components/ui/toaster";
+import LandingPage from "./frontend/src/components/LandingPage";
+import CreateWish from "./frontend/src/components/CreateWish";
+import BirthdayWish from "./frontend/src/components/BirthdayWish";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
