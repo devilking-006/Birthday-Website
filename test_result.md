@@ -247,3 +247,5 @@ agent_communication:
     message: "Completed full-stack implementation. Backend has OpenAI integration, file upload, and MongoDB CRUD operations. Frontend integrated with backend APIs. Backend needs comprehensive testing first before frontend testing."
   - agent: "main"
     message: "BACKEND TESTING COMPLETE: All backend functionality working correctly. Fixed demo wish issue, tested all APIs manually. OpenAI quota exceeded but fallback messages working. Created demo wish with photos. Ready for frontend testing."
+  - agent: "main"
+    message: "FRONTEND TESTING REQUESTED: Backend is fully functional. Now testing frontend integration, user experience, and UI components. Demo wish available at /gift/efad3b9c-c688-4128-bd7d-55feb93e58e1"
